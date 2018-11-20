@@ -59,7 +59,15 @@ $app->post('/checkTrialStatus', function() use ($app) {
 	$response= $db->checkTrialStatus($r);
 	echoRespnse(201, $response);
 });
+//trialSubscription
+$app->post('/trialSubscription', function() use ($app) {
 
+	$db = new DbHandler();
+	$response = array();
+	$r = json_decode($app->request->getBody());
+	$response= $db->trialSubscription($r);
+	echoRespnse(201, $response);
+});
 
 // v2- phase-2
 // Get board details	

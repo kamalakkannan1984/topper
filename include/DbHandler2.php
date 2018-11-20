@@ -140,6 +140,59 @@ class DbHandler {
 		
 		return $res;
 	}
+	public function trialSubscription($r){
+
+			/*
+			Table : Subscription
+
+			SubscriptionID
+			DeviceId
+			DateofSub
+			BoardId
+			Lang
+			Std
+			Fees
+			EndDateTime
+						*/
+			//echo $Std  	 = $r->Std; die;
+			date_default_timezone_set('Asia/Kolkata');	
+			$DeviceId 		= $r->DeviceId;
+			$BoardId 		= $r->BoardId;
+			$Lang    		= $r->Lang;
+			$Std  	 		= $r->Std;			
+			$promoCode 		= $r->promoCode;
+			$EndDateTime 	= $r->EndDateTime;
+			
+			
+			$res = array();
+			$stdArr = $this->standarddetails($r);
+			//$WalletArr = $this->verifyDeviceID($DeviceId);
+			//echo "stdArr<pre>"; print_r($stdArr);
+			//echo "WalletArr<pre>"; print_r($WalletArr); die;
+			
+				$Fee = $stdArr['SubscriptionFees'];
+				$DateofSub = date("Y-m-d H:i:s");
+				$EndDateTime = $EndDateTime;
+				$stmt = $this->conn->prepare("INSERT INTO Subscription(DeviceId, DateofSub, BoardId, Lang, Std, Fees, EndDateTime, PromoName) VALUES(?, ?, ?, ?, ?, ?, ?, ?)");
+				$stmt->bind_param("issssisis", $DeviceId, $DateofSub, $BoardId, $Lang, $Std, $Fee, $EndDateTime, $promoCode);					
+				  $result = $stmt->execute();					 
+					if (false === $result) {
+						die('execute() failed: ' . htmlspecialchars($stmt->error));
+					}
+					$stmt->close();
+				if($result)
+					{ 
+					 $res['message'] = "Subscription successfully";					 
+					 $res['status']  = 1;
+					 
+					}else{
+					 $res['message'] = "Update Error";
+					 $res['status']  = 0;
+					}
+				
+							
+		return $res;	
+}
 //v2- phase -2
     /**
      * Checking for duplicate user by email address
