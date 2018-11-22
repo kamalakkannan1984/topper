@@ -68,7 +68,15 @@ $app->post('/trialSubscription', function() use ($app) {
 	$response= $db->trialSubscription($r);
 	echoRespnse(201, $response);
 });
+//updateDemoUser
+$app->post('/updateDemoUser', function() use ($app) {
 
+	$db = new DbHandler();
+	$response = array();
+	$r = json_decode($app->request->getBody());
+	$response= $db->updateDemoUser($r);
+	echoRespnse(201, $response);
+});
 // v2- phase-2
 // Get board details	
 $app->post('/showlang', function() use ($app) {

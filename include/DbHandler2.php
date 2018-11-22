@@ -182,8 +182,12 @@ class DbHandler {
 					$stmt->close();
 				if($result)
 					{ 
+					 $this->updateTopUserInfoBySubNet($DeviceId);
 					 $res['message'] = "Subscription successfully";					 
 					 $res['status']  = 1;
+					 $res['subscriptionUpto'] = $EndDateTime;					 
+					 $res['subscriptionStandard'] = $Std;
+					 $res['StdPWD'] = $stdArr['StdPWD'];
 					 
 					}else{
 					 $res['message'] = "Update Error";
@@ -192,6 +196,26 @@ class DbHandler {
 				
 							
 		return $res;	
+}
+public function updateDemoUser($r){
+				$DeviceId 		= $r->DeviceId;
+				$res = array();
+				$SubscriptionStatus = "DEMO";
+				$stmt = $this->conn->prepare("UPDATE TopUserInfo set SubscriptionStatus = ? WHERE DeviceId = ?");
+			 
+						$stmt->bind_param("ss", $SubscriptionStatus, $DeviceId);
+						$stmt->execute();
+						$num_affected_rows = $stmt->affected_rows;
+						$stmt->close();
+						if($num_affected_rows > 0)
+						{			 
+						    $res['message'] = "Subscription successfully";					 
+							$res['status']  = 1;
+						 
+						}else{
+						   $res['message'] = "Update Error";
+							$res['status']  = 0;
+						} 
 }
 //v2- phase -2
     /**
