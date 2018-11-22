@@ -170,11 +170,11 @@ class DbHandler {
 			//echo "stdArr<pre>"; print_r($stdArr);
 			//echo "WalletArr<pre>"; print_r($WalletArr); die;
 			
-				$Fee = $stdArr['SubscriptionFees'];
+				$Fee = $stdArr['monthlySubscriptionFees'];
 				$DateofSub = date("Y-m-d H:i:s");
 				$EndDateTime = $EndDateTime;
 				$stmt = $this->conn->prepare("INSERT INTO Subscription(DeviceId, DateofSub, BoardId, Lang, Std, Fees, EndDateTime, PromoName) VALUES(?, ?, ?, ?, ?, ?, ?, ?)");
-				$stmt->bind_param("issssisis", $DeviceId, $DateofSub, $BoardId, $Lang, $Std, $Fee, $EndDateTime, $promoCode);					
+				$stmt->bind_param("issssiss", $DeviceId, $DateofSub, $BoardId, $Lang, $Std, $Fee, $EndDateTime, $promoCode);					
 				  $result = $stmt->execute();					 
 					if (false === $result) {
 						die('execute() failed: ' . htmlspecialchars($stmt->error));
@@ -1474,16 +1474,17 @@ public function standarddetails($r){
 			$IStatus = 'Active';
 			$res = array();
 			
-			$stmt = $this->conn->prepare("SELECT Fees, BroadCastMsg, StdPWD from Standard WHERE BoardId = ? AND Lang = ? AND Std = ? AND IStatus = ?");
+			$stmt = $this->conn->prepare("SELECT Fees, Monthly, BroadCastMsg, StdPWD from Standard WHERE BoardId = ? AND Lang = ? AND Std = ? AND IStatus = ?");
 			$stmt->bind_param("iiis", $BoardId, $Lang, $Std, $IStatus);
 				
         if ($stmt->execute()) {
             
-            $stmt->bind_result($Fees, $BroadCastMsg, $StdPWD);
+            $stmt->bind_result($Fees, $Monthly, $BroadCastMsg, $StdPWD);
             // TODO
             // $task = $stmt->get_result()->fetch_assoc();
             $stmt->fetch();			
 			$res["SubscriptionFees"] = $Fees;
+			$res["monthlySubscriptionFees"] = $Monthly;
             $res["Message"] = $BroadCastMsg;
 			$res["StdPWD"] = $StdPWD;
             $stmt->close();            
