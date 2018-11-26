@@ -162,7 +162,7 @@ class DbHandler {
 			$Std  	 		= $r->Std;			
 			$promoCode 		= $r->promoCode;
 			$EndDateTime 	= $r->EndDateTime;
-			
+			$Discount		= 'Fees';
 			
 			$res = array();
 			$stdArr = $this->standarddetails($r);
@@ -173,8 +173,8 @@ class DbHandler {
 				$Fee = $stdArr['monthlySubscriptionFees'];
 				$DateofSub = date("Y-m-d H:i:s");
 				$EndDateTime = $EndDateTime;
-				$stmt = $this->conn->prepare("INSERT INTO Subscription(DeviceId, DateofSub, BoardId, Lang, Std, Fees, EndDateTime, PromoName) VALUES(?, ?, ?, ?, ?, ?, ?, ?)");
-				$stmt->bind_param("issssiss", $DeviceId, $DateofSub, $BoardId, $Lang, $Std, $Fee, $EndDateTime, $promoCode);					
+				$stmt = $this->conn->prepare("INSERT INTO Subscription(DeviceId, DateofSub, BoardId, Lang, Std, Fees, EndDateTime, Discount, PromoName) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?)");
+				$stmt->bind_param("issssisss", $DeviceId, $DateofSub, $BoardId, $Lang, $Std, $Fee, $EndDateTime, $Discount, $promoCode);					
 				  $result = $stmt->execute();					 
 					if (false === $result) {
 						die('execute() failed: ' . htmlspecialchars($stmt->error));
@@ -182,7 +182,7 @@ class DbHandler {
 					$stmt->close();
 				if($result)
 					{ 
-					 $this->updateTopUserInfoBySubNet($DeviceId);
+					 $this->updateTopUserInfoByTrail($DeviceId);
 					 $res['message'] = "Subscription successfully";					 
 					 $res['status']  = 1;
 					 $res['subscriptionUpto'] = $EndDateTime;					 
@@ -196,6 +196,25 @@ class DbHandler {
 				
 							
 		return $res;	
+}
+
+private function updateTopUserInfoByTrail($DeviceId){
+	   
+				$SubscriptionStatus = "Subscribe";
+				$Mode = 1;
+			$stmt = $this->conn->prepare("UPDATE TopUserInfo set SubscriptionStatus = ?, Mode = ? WHERE DeviceId = ?");
+			 
+						$stmt->bind_param("sis", $SubscriptionStatus, $Mode, $DeviceId);
+						$stmt->execute();
+						$num_affected_rows = $stmt->affected_rows;
+						$stmt->close();
+						if($num_affected_rows > 0)
+						{			 
+						   return 1;
+						 
+						}else{
+						   return 0;
+						} 
 }
 public function updateDemoUser($r){
 				$DeviceId 		= $r->DeviceId;
@@ -270,10 +289,10 @@ public function updateDemoUser($r){
         //echo $id; die;
 		$res = array();		
 		if($type == 'Mobile'){
-			$stmt = $this->conn->prepare("SELECT IStatus, UserMbNo, DeviceId, Wallet, SubscriptionStatus, UserType, MasterWallet  from TopUserInfo WHERE IMEI_1 = ? OR IMEI_2 = ?");
+			$stmt = $this->conn->prepare("SELECT IStatus, UserMbNo, DeviceId, Wallet, SubscriptionStatus, UserType, MasterWallet, Mode  from TopUserInfo WHERE IMEI_1 = ? OR IMEI_2 = ?");
 			$stmt->bind_param("ii", $id, $id);
 		}else if($type == 'Tablet'){
-		    $stmt = $this->conn->prepare("SELECT IStatus, UserMbNo, DeviceId, Wallet, SubscriptionStatus, UserType, MasterWallet  from TopUserInfo WHERE MAC = ?");
+		    $stmt = $this->conn->prepare("SELECT IStatus, UserMbNo, DeviceId, Wallet, SubscriptionStatus, UserType, MasterWallet, Mode  from TopUserInfo WHERE MAC = ?");
 			$stmt->bind_param("i", $id);
 		}else{
 				$res['message'] = "The Device type did not match!";
@@ -281,7 +300,7 @@ public function updateDemoUser($r){
 				return $res;
 		}		
         $stmt->execute();
-        $stmt->bind_result($IStatus, $UserMbNo, $DeviceId, $Wallet, $SubscriptionStatus, $UserType, $MasterWallet);
+        $stmt->bind_result($IStatus, $UserMbNo, $DeviceId, $Wallet, $SubscriptionStatus, $UserType, $MasterWallet, $Mode);
         $stmt->fetch();       
 		$stmt->close();
         if($IStatus == 'Verified'){	
@@ -325,6 +344,7 @@ public function updateDemoUser($r){
 					$res['Wallet'] = $Wallet;
 				}
 				$res['SubscriptionStatus'] = $SubscriptionStatus;
+				$res['Mode']			   = $Mode;
 				$res['UserType'] = $UserType;				
 				if($MasterWallet == null){
 					$res['MasterWallet'] = 0;
