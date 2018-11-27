@@ -218,11 +218,13 @@ private function updateTopUserInfoByTrail($DeviceId){
 }
 public function updateDemoUser($r){
 				$DeviceId 		= $r->DeviceId;
+				//echo $DeviceId; die;
 				$res = array();
 				$SubscriptionStatus = "DEMO";
-				$stmt = $this->conn->prepare("UPDATE TopUserInfo set SubscriptionStatus = ? WHERE DeviceId = ?");
+				$Mode = 0;
+				$stmt = $this->conn->prepare("UPDATE TopUserInfo set SubscriptionStatus = ?, Mode = ? WHERE DeviceId = ?");
 			 
-						$stmt->bind_param("ss", $SubscriptionStatus, $DeviceId);
+						$stmt->bind_param("sis", $SubscriptionStatus, $Mode, $DeviceId);
 						$stmt->execute();
 						$num_affected_rows = $stmt->affected_rows;
 						$stmt->close();
@@ -235,6 +237,7 @@ public function updateDemoUser($r){
 						   $res['message'] = "Update Error";
 							$res['status']  = 0;
 						} 
+	return $res;					
 }
 //v2- phase -2
     /**
