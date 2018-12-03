@@ -77,6 +77,15 @@ $app->post('/updateDemoUser', function() use ($app) {
 	$response= $db->updateDemoUser($r);
 	echoRespnse(201, $response);
 });
+//getStandardFee
+$app->post('/getStandardFee', function() use ($app) {
+
+	$db = new DbHandler();
+	$response = array();
+	$r = json_decode($app->request->getBody());
+	$response= $db->getStandardFee($r);
+	echoRespnse(201, $response);
+});
 // v2- phase-2
 // Get board details	
 $app->post('/showlang', function() use ($app) {
