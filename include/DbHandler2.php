@@ -265,6 +265,72 @@ public function getStandardFee($r){
             return NULL;
         }
 }
+
+//
+public function subscriptionByUser($r){
+
+			/*
+			Table : Subscription
+
+			SubscriptionID
+			DeviceId
+			DateofSub
+			BoardId
+			Lang
+			Std
+			Fees
+			EndDateTime
+						*/
+			//echo $Std  	 = $r->Std; die;
+			date_default_timezone_set('Asia/Kolkata');	
+			$DeviceId = $r->DeviceId;
+			$BoardId = $r->BoardId;
+			$Lang    = $r->Lang;
+			$Std  	 = $r->Std;
+			$discount = $r->discount;
+			$promoCode = $r->promoCode;
+			$WalletAmt = $r->WalletAmt;
+			$EndDateTime = $r->EndDateTime;
+			$Fee		 = $r->Fee;
+			
+			$res = array();
+			$stdArr = $this->standarddetails($r);
+			
+			$WalletArr = $this->verifyDeviceID($DeviceId);
+					
+			
+				
+				$DateofSub = date("Y-m-d H:i:s");
+				
+				$stmt = $this->conn->prepare("INSERT INTO Subscription(DeviceId, DateofSub, BoardId, Lang, Std, Fees, EndDateTime, Discount, PromoName) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?)");
+				$stmt->bind_param("issssisis", $DeviceId, $DateofSub, $BoardId, $Lang, $Std, $Fee, $EndDateTime, $discount, $promoCode);					
+				  $result = $stmt->execute();					 
+					if (false === $result) {
+						die('execute() failed: ' . htmlspecialchars($stmt->error));
+					}
+					$stmt->close();
+				if($result)
+					{
+					 // update user Wallet;
+					 
+					$wallet = $WalletArr['Wallet'] - $WalletAmt;
+					 
+					 
+					 $this->updateTopUserInfoBySub($wallet, $DeviceId);
+					 $res['message'] = "Subscription successfully";					 
+					 $res['status']  = 1;
+					 $res['subscriptionUpto'] = $EndDateTime;
+					 $res['remainingWalletAmount'] = $wallet;
+					 $res['subscriptionStandard'] = $Std;
+					 $res['StdPWD'] = $stdArr['StdPWD'];
+					}else{
+					 $res['message'] = "Update Error";
+					 $res['status']  = 0;
+					}
+				
+							
+		return $res;	
+}
 //v2- phase -2
     /**
      * Checking for duplicate user by email address
@@ -1576,7 +1642,8 @@ public function subscription($r){
 			$Std  	 = $r->Std;
 			$discount = $r->discount;
 			$promoCode = $r->promoCode;
-			
+			$EndDateTime = $r->EndDateTime;
+			$Fee		 = $r->Fee;
 			$res = array();
 			$stdArr = $this->standarddetails($r);
 			$WalletArr = $this->verifyDeviceID($DeviceId);
@@ -1588,9 +1655,9 @@ public function subscription($r){
 				$checkValue = $WalletArr['Wallet'];
             } 				
 			if($stdArr['SubscriptionFees'] <= $checkValue){
-				$Fee = $stdArr['SubscriptionFees'];
+//$Fee = $stdArr['SubscriptionFees'];
 				$DateofSub = date("Y-m-d H:i:s");;
-				$EndDateTime = $stdArr['SubscriptionUpto'];
+				//$EndDateTime = $stdArr['SubscriptionUpto'];
 				$stmt = $this->conn->prepare("INSERT INTO Subscription(DeviceId, DateofSub, BoardId, Lang, Std, Fees, EndDateTime, Discount, PromoName) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?)");
 				$stmt->bind_param("issssisis", $DeviceId, $DateofSub, $BoardId, $Lang, $Std, $Fee, $EndDateTime, $discount, $promoCode);					
 				  $result = $stmt->execute();					 
@@ -1907,7 +1974,8 @@ Status
 			$Std  	 = $r->Std;
 			$discount = $r->discount;
 			$promoCode = $r->promoCode;
-			
+			$EndDateTime = $r->EndDateTime;
+			$Fee		 = $r->Fee;
 			
 			
 			$res = array();
@@ -1916,9 +1984,9 @@ Status
 			//echo "stdArr<pre>"; print_r($stdArr);
 			//echo "WalletArr<pre>"; print_r($WalletArr); die;
 			
-				$Fee = $stdArr['SubscriptionFees'];
+				//$Fee = $stdArr['SubscriptionFees'];
 				$DateofSub = date("Y-m-d H:i:s");;
-				$EndDateTime = $stdArr['SubscriptionUpto'];
+				//$EndDateTime = $stdArr['SubscriptionUpto'];
 				$stmt = $this->conn->prepare("INSERT INTO Subscription(DeviceId, DateofSub, BoardId, Lang, Std, Fees, EndDateTime, Discount, PromoName) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?)");
 				$stmt->bind_param("issssisis", $DeviceId, $DateofSub, $BoardId, $Lang, $Std, $Fee, $EndDateTime, $discount, $promoCode);					
 				  $result = $stmt->execute();					 

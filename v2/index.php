@@ -68,6 +68,15 @@ $app->post('/trialSubscription', function() use ($app) {
 	$response= $db->trialSubscription($r);
 	echoRespnse(201, $response);
 });
+//subscriptionByUser
+$app->post('/subscriptionByUser', function() use ($app) {
+
+	$db = new DbHandler();
+	$response = array();
+	$r = json_decode($app->request->getBody());
+	$response= $db->subscriptionByUser($r);
+	echoRespnse(201, $response);
+});
 //updateDemoUser
 $app->post('/updateDemoUser', function() use ($app) {
 
