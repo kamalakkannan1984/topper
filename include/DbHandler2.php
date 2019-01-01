@@ -155,14 +155,15 @@ class DbHandler {
 			EndDateTime
 						*/
 			//echo $Std  	 = $r->Std; die;
+			
+			
 			date_default_timezone_set('Asia/Kolkata');	
 			$DeviceId 		= $r->DeviceId;
 			$BoardId 		= $r->BoardId;
 			$Lang    		= $r->Lang;
 			$Std  	 		= $r->Std;			
 			$promoCode 		= $r->promoCode;
-			$EndDateTime 	= $r->EndDateTime;
-			$Discount		= 'Fees';
+			$EndDateTime 	= $r->EndDateTime;			
 			$Mode			= 1;
 			$res = array();
 			$stdArr = $this->standarddetails($r);
@@ -171,6 +172,7 @@ class DbHandler {
 			//echo "WalletArr<pre>"; print_r($WalletArr); die;
 			
 				$Fee = $stdArr['monthlySubscriptionFees'];
+				$Discount		= $Fee;
 				$DateofSub = date("Y-m-d H:i:s");
 				$EndDateTime = $EndDateTime;
 				$stmt = $this->conn->prepare("INSERT INTO Subscription(DeviceId, DateofSub, BoardId, Lang, Std, Fees, EndDateTime, Discount, PromoName, Mode) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
@@ -183,6 +185,7 @@ class DbHandler {
 				if($result)
 					{ 
 					 $this->updateTopUserInfoByTrail($DeviceId);
+					 
 					 $res['message'] = "Subscription successfully";					 
 					 $res['status']  = 1;
 					 $res['subscriptionUpto'] = $EndDateTime;					 
@@ -197,7 +200,120 @@ class DbHandler {
 							
 		return $res;	
 }
+private function checkIsCashback($promoCode){
+		$stmt = $this->conn->prepare("SELECT Type from PromoCode WHERE CodeName = ?");
+        $stmt->bind_param("s", $promoCode);			
+		$stmt->execute();
+        $stmt->bind_result($Type);
+        $stmt->fetch();
+        $stmt->close();
+        return $Type;
+        
+}
+private function UpdateTopCouponInfo($r, $Fee, $result){
+	
+	/*
+	TopCouponInfo
 
+		BatchId = 9999999999
+		Coupon  = C1
+		CouponSR =CB1
+		CouponAmt = CASH BACK Value
+		Istatus  = Used
+		UsedDateTime = Now
+		Type  = C
+		DeviceId   = Device no 
+		Remark  = Subscription ID
+	*/
+	$BatchId 		= '9999999999';
+	$Coupon			= ($this->autoIncr())? 'C'.$this->autoIncr() : 'C1';
+	$CouponSR		= ($this->autoIncr())? 'CB'.$this->autoIncr() : 'CB1';
+	$CouponAmt		= $Fee;
+	$Istatus		= 'Used';
+	$UsedDateTime	= date("Y-m-d H:i:s");
+	$Type  			= 'C';
+	$DeviceId 		= $r->DeviceId;
+	$Remark         = $result;
+	$stmt = $this->conn->prepare("INSERT INTO TopCouponInfo(BatchId, CoupNo, CoupSRNo, CouponAmt, Istatus, UsedDateTime, Type, DeviceId, Remark) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?)");
+			$stmt->bind_param("ississsii", $BatchId, $Coupon, $CouponSR, $CouponAmt, $Istatus, $UsedDateTime, $Type, $DeviceId, $Remark);					
+			$result = $stmt->execute();					 
+			if (false === $result) {
+				die('execute() failed: ' . htmlspecialchars($stmt->error));
+			}
+			$stmt->close();
+		return 1;	
+	
+}
+private function updateWalletCashback($DeviceId, $walletCB, $Fee){
+	
+		$stmt = $this->conn->prepare("SELECT Wallet, WalletCashBack from TopUserInfo WHERE DeviceId = ?");
+		$stmt->bind_param("i", $DeviceId);		
+		$stmt->execute();
+        $stmt->bind_result($Wallet, $WalletCashBack);
+        $stmt->fetch();
+        $stmt->close();
+		if($WalletCashBack == 0){
+			$WCB = 	$WalletCashBack + $walletCB;
+		}	
+		else if($WalletCashBack > 0){
+			$WCB = 0;
+			$Wallet = $Wallet - ($Fee - $WalletCashBack);
+		}/*else if($wallet > $WalletCashBack){
+			$NW = $Wallet - $WalletCashBack;
+			$WalletCashBack = 0;
+			$Wallet = $Wallet - $NW;
+		}*/		
+		
+		
+		$stmt = $this->conn->prepare("UPDATE TopUserInfo set Wallet = ?, WalletCashBack = ? WHERE DeviceId = ?");			 
+		$stmt->bind_param("iis", $Wallet, $WCB, $DeviceId);
+		$stmt->execute();
+		$num_affected_rows = $stmt->affected_rows;
+		$stmt->close();
+		if($num_affected_rows > 0)
+		{			 
+			return $Wallet;
+						 
+		}else{
+			return 0;
+		} 
+		
+}	
+private function autoIncr(){
+	
+	//
+	//$param = "%{$_POST['user']}%";
+//$stmt = $db->prepare("SELECT id,Username FROM users WHERE Username LIKE ?");
+//$stmt->bind_param("s", $param);
+
+		$sql = "SELECT CoupNo FROM TopCouponInfo WHERE CoupNo LIKE '%C%' ORDER BY id DESC";
+		//echo $sql; die;
+		$a_data = array();   
+  		$res = $this->conn->query($sql);
+		
+		if($res === false) {
+  				$this->last_error = 'Wrong SQL: ' . $sql . ' Error: ' . $conn->ErrorMsg();
+		} else {
+  				$res->data_seek(0);
+ 				 while($row = $res->fetch_assoc()) {
+   					 array_push($a_data, $row);
+  					}
+		}
+		//print_r($a_data[0]['CoupNo']); die;
+		/*$param = "C";
+		$stmt = $this->conn->prepare("SELECT CoupNo from TopCouponInfo WHERE CoupNo LIKE CONCAT('%', ?, '%')");
+        $stmt->bind_param("s", $param);			
+		$stmt->execute();
+        $stmt->bind_result($Coupon);
+        $stmt->fetch();
+        $stmt->close */
+		if(!empty($a_data)){			
+			preg_match("/([a-zA-Z]+)(\\d+)/", $a_data[0]['CoupNo'], $matches);				
+			return $matches[2] + 1;
+		}else{
+			return 0;
+		}	
+}	
 private function updateTopUserInfoByTrail($DeviceId){
 	   
 				$SubscriptionStatus = "Subscribe";
@@ -304,7 +420,8 @@ public function subscriptionByUser($r){
 				
 				$stmt = $this->conn->prepare("INSERT INTO Subscription(DeviceId, DateofSub, BoardId, Lang, Std, Fees, EndDateTime, Discount, PromoName) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?)");
 				$stmt->bind_param("issssisis", $DeviceId, $DateofSub, $BoardId, $Lang, $Std, $Fee, $EndDateTime, $discount, $promoCode);					
-				  $result = $stmt->execute();					 
+				$result = $stmt->execute();
+				$insert_id = $stmt->insert_id;				  
 					if (false === $result) {
 						die('execute() failed: ' . htmlspecialchars($stmt->error));
 					}
@@ -312,15 +429,34 @@ public function subscriptionByUser($r){
 				if($result)
 					{
 					 // update user Wallet;
+					 $walletCB = 0;
+					 $wallet   = 0;
+					 $NW = 0;
 					 
-					$wallet = $WalletArr['Wallet'] - $WalletAmt;
+					 if($WalletArr['WalletCashBack'] > 0){
+						 if($WalletArr['WalletCashBack'] == $WalletAmt){
+							 $walletCB = $WalletArr['WalletCashBack'] - $WalletAmt;
+							 $wallet = $WalletArr['Wallet'];
+						 }else{
+							 $NW =  $WalletAmt - $WalletArr['WalletCashBack'];
+							 $wallet = $WalletArr['Wallet'] - $NW;
+						 }
+						
+					 }else{
+						$wallet = $WalletArr['Wallet'] - $WalletAmt; 
+					 }						 
 					 
-					 
-					 $this->updateTopUserInfoBySub($wallet, $DeviceId);
+					 $this->updateTopUserInfoBySub($wallet, $walletCB, $DeviceId);
+					 if($this->checkIsCashback($promoCode) == 'C'){
+						
+						$this->UpdateTopCouponInfo($r, $Fee, $insert_id);
+						$this->updateTopUserInfoBySub($wallet, $walletCB + $discount , $DeviceId);						
+						//$this->updateWalletCashback($DeviceId, $WalletAmt);
+					}	
 					 $res['message'] = "Subscription successfully";					 
 					 $res['status']  = 1;
 					 $res['subscriptionUpto'] = $EndDateTime;
-					 $res['remainingWalletAmount'] = $wallet;
+					 $res['remainingWalletAmount'] = $wallet + $walletCB;
 					 $res['subscriptionStandard'] = $Std;
 					 $res['StdPWD'] = $stdArr['StdPWD'];
 					}else{
@@ -384,10 +520,10 @@ public function subscriptionByUser($r){
         //echo $id; die;
 		$res = array();		
 		if($type == 'Mobile'){
-			$stmt = $this->conn->prepare("SELECT IStatus, UserMbNo, DeviceId, Wallet, SubscriptionStatus, UserType, MasterWallet from TopUserInfo WHERE IMEI_1 = ? OR IMEI_2 = ?");
+			$stmt = $this->conn->prepare("SELECT IStatus, UserMbNo, DeviceId, Wallet, WalletCashBack, SubscriptionStatus, UserType, MasterWallet from TopUserInfo WHERE IMEI_1 = ? OR IMEI_2 = ?");
 			$stmt->bind_param("ii", $id, $id);
 		}else if($type == 'Tablet'){
-		    $stmt = $this->conn->prepare("SELECT IStatus, UserMbNo, DeviceId, Wallet, SubscriptionStatus, UserType, MasterWallet from TopUserInfo WHERE MAC = ?");
+		    $stmt = $this->conn->prepare("SELECT IStatus, UserMbNo, DeviceId, Wallet, WalletCashBack, SubscriptionStatus, UserType, MasterWallet from TopUserInfo WHERE MAC = ?");
 			$stmt->bind_param("i", $id);
 		}else{
 				$res['message'] = "The Device type did not match!";
@@ -395,7 +531,7 @@ public function subscriptionByUser($r){
 				return $res;
 		}		
         $stmt->execute();
-        $stmt->bind_result($IStatus, $UserMbNo, $DeviceId, $Wallet, $SubscriptionStatus, $UserType, $MasterWallet);
+        $stmt->bind_result($IStatus, $UserMbNo, $DeviceId, $Wallet, $WalletCashBack,  $SubscriptionStatus, $UserType, $MasterWallet);
         $stmt->fetch();       
 		$stmt->close();
         if($IStatus == 'Verified'){	
@@ -434,9 +570,9 @@ public function subscriptionByUser($r){
 				$res['UserMbNo'] = $UserMbNo;
 				$res['DeviceId'] = $DeviceId;
 				if($Wallet == NULL){				
-					$res['Wallet'] = 0;
+					$res['Wallet'] = 0 + ($WalletCashBack != NULL)? $WalletCashBack : 0;
 				}else{
-					$res['Wallet'] = $Wallet;
+					$res['Wallet'] = $Wallet + $WalletCashBack;
 				}
 				$res['SubscriptionStatus'] = $SubscriptionStatus;				
 				$res['UserType'] = $UserType;				
@@ -867,12 +1003,12 @@ public function subscriptionByUser($r){
 							return 0;
 						}
    }
-	private function updateTopUserInfoBySub($Wallet, $DeviceId){
+	private function updateTopUserInfoBySub($Wallet, $WalletCB, $DeviceId){
 	   
 				$SubscriptionStatus = "Subscribe";
-			$stmt = $this->conn->prepare("UPDATE TopUserInfo set Wallet = ?, SubscriptionStatus = ? WHERE DeviceId = ?");
+			$stmt = $this->conn->prepare("UPDATE TopUserInfo set Wallet = ?, WalletCashBack = ?, SubscriptionStatus = ? WHERE DeviceId = ?");
 			 
-						$stmt->bind_param("iss",$Wallet, $SubscriptionStatus, $DeviceId);
+						$stmt->bind_param("iiss",$Wallet, $WalletCB, $SubscriptionStatus, $DeviceId);
 						$stmt->execute();
 						$num_affected_rows = $stmt->affected_rows;
 						$stmt->close();
@@ -903,18 +1039,19 @@ public function subscriptionByUser($r){
    private function verifyDeviceID($DeviceId){
 
 			 
-			$stmt = $this->conn->prepare("SELECT DeviceId, IStatus, Wallet from TopUserInfo WHERE DeviceId = ?");
+			$stmt = $this->conn->prepare("SELECT DeviceId, IStatus, Wallet, WalletCashBack from TopUserInfo WHERE DeviceId = ?");
 			$stmt->bind_param("i", $DeviceId);
 				
         if ($stmt->execute()) {
             $res = array();
-            $stmt->bind_result($DeviceId, $IStatus, $Wallet);
+            $stmt->bind_result($DeviceId, $IStatus, $Wallet, $WalletCashBack);
             // TODO
             // $task = $stmt->get_result()->fetch_assoc();
             $stmt->fetch();			
 			$res["DeviceId"] = $DeviceId;
             $res["IStatus"] = $IStatus;
-			$res["Wallet"] = $Wallet;				
+			$res["Wallet"] = $Wallet;
+			$res["WalletCashBack"] = $WalletCashBack;
             $stmt->close();			
             return $res;
 
@@ -1621,7 +1758,8 @@ public function standarddetails($r){
 	}
 //subscription
 public function subscription($r){
-
+				//echo $this->UpdateTopCouponInfo($r->DeviceId='4934688893', 150, 123);
+				//die;
 			/*
 			Table : Subscription
 
@@ -1647,20 +1785,21 @@ public function subscription($r){
 			$res = array();
 			$stdArr = $this->standarddetails($r);
 			$WalletArr = $this->verifyDeviceID($DeviceId);
-			//echo "stdArr<pre>"; print_r($stdArr);
+			//echo "stdArr<pre>"; print_r($stdArr); die;
 			//echo "WalletArr<pre>"; print_r($WalletArr); die;
-			if($discount != 0){
+			/*if($discount != 0){
 				$checkValue = $WalletArr['Wallet'] + $discount;
 			}else{
 				$checkValue = $WalletArr['Wallet'];
             } 				
-			if($stdArr['SubscriptionFees'] <= $checkValue){
+			if( $Fee <= $checkValue){ */
 //$Fee = $stdArr['SubscriptionFees'];
-				$DateofSub = date("Y-m-d H:i:s");;
+				$DateofSub = date("Y-m-d H:i:s");
 				//$EndDateTime = $stdArr['SubscriptionUpto'];
 				$stmt = $this->conn->prepare("INSERT INTO Subscription(DeviceId, DateofSub, BoardId, Lang, Std, Fees, EndDateTime, Discount, PromoName) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?)");
 				$stmt->bind_param("issssisis", $DeviceId, $DateofSub, $BoardId, $Lang, $Std, $Fee, $EndDateTime, $discount, $promoCode);					
-				  $result = $stmt->execute();					 
+				$result = $stmt->execute();
+				$insert_id = $stmt->insert_id;					  
 					if (false === $result) {
 						die('execute() failed: ' . htmlspecialchars($stmt->error));
 					}
@@ -1668,17 +1807,61 @@ public function subscription($r){
 				if($result)
 					{
 					 // update user Wallet;
-					 if($discount != 0){
-						 $wallet = $WalletArr['Wallet'] - ($Fee - $discount);
-					 }else{
-						 $wallet = $WalletArr['Wallet'] - $Fee;
-					 }
-					  
-					 $this->updateTopUserInfoBySub($wallet, $DeviceId);
+					 $walletCB = 0;
+					 $wallet = 0;
+					 $WN = 0;
+					 if($this->checkIsCashback($promoCode) != 'C'){
+					 
+							 if($discount != 0){
+								  if($WalletArr['WalletCashBack'] >0 && $Fee > $WalletArr['WalletCashBack'] ){
+									$WN =  ($Fee - $discount);
+									if($WN < $WalletArr['WalletCashBack'] ){
+										$WN =	$WalletArr['WalletCashBack'] - $WN;
+										$walletCB = $WN;
+										$wallet = $WalletArr['Wallet'];
+									}else{
+										$WN =  $WN - $WalletArr['WalletCashBack'];
+										$wallet = $WalletArr['Wallet'] - $WN;
+									}									
+									
+								  }else if($WalletArr['WalletCashBack'] >0 && $Fee < $WalletArr['WalletCashBack']){
+									 $walletCB = $WalletArr['WalletCashBack'] - ($Fee - $discount);
+								  }else{		
+									$wallet = $WalletArr['Wallet'] - ($Fee - $discount); 
+								  
+									}
+							
+							 }else{
+								 if($WalletArr['WalletCashBack'] >0 && $Fee > $WalletArr['WalletCashBack'] ){
+									$WN =  $Fee - $WalletArr['WalletCashBack'];
+									$wallet = $WalletArr['Wallet'] - $WN;
+								  }else if($WalletArr['WalletCashBack'] >0 && $Fee < $WalletArr['WalletCashBack']){
+									 $walletCB = $WalletArr['WalletCashBack'] - $Fee;
+								  }else{		
+									$wallet = $WalletArr['Wallet'] - $Fee; 
+								  
+								}
+							 } 
+						$this->updateTopUserInfoBySub($wallet, $walletCB, $DeviceId);
+					 }else{				 
+							if($WalletArr['WalletCashBack'] >0 && $Fee > $WalletArr['WalletCashBack'] ){
+								$WN =  $Fee - $WalletArr['WalletCashBack'];
+								$wallet = $WalletArr['Wallet'] - $WN;
+							  }else if($WalletArr['WalletCashBack'] >0 && $Fee < $WalletArr['WalletCashBack']){
+								 $walletCB = $WalletArr['WalletCashBack'] - $Fee;
+							  }else{		
+								$wallet = $WalletArr['Wallet'] - $Fee; 
+							  
+							}
+							$this->UpdateTopCouponInfo($r, $Fee, $insert_id);						
+							//$wallet = $this->updateWalletCashback($DeviceId, $discount, $Fee);
+							$this->updateTopUserInfoBySub($wallet, $walletCB + $discount, $DeviceId);
+					}
+					
 					 $res['message'] = "Subscription successfully";					 
 					 $res['status']  = 1;
 					 $res['subscriptionUpto'] = $EndDateTime;
-					 $res['remainingWalletAmount'] = $wallet;
+					 $res['remainingWalletAmount'] = $wallet + $walletCB;
 					 $res['subscriptionStandard'] = $Std;
 					 $res['StdPWD'] = $stdArr['StdPWD'];
 					}else{
@@ -1686,10 +1869,10 @@ public function subscription($r){
 					 $res['status']  = 0;
 					}
 				
-			}else{
+			/*}else{
 				$res['message'] = 'Insufficient Wallet Amount...';
-				$res['status']  = 0;
-            }				
+				$res['status']  = 0; 
+            }*/				
 		return $res;	
 }
 //subscriptionhistory
@@ -1989,7 +2172,8 @@ Status
 				//$EndDateTime = $stdArr['SubscriptionUpto'];
 				$stmt = $this->conn->prepare("INSERT INTO Subscription(DeviceId, DateofSub, BoardId, Lang, Std, Fees, EndDateTime, Discount, PromoName) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?)");
 				$stmt->bind_param("issssisis", $DeviceId, $DateofSub, $BoardId, $Lang, $Std, $Fee, $EndDateTime, $discount, $promoCode);					
-				  $result = $stmt->execute();					 
+				$result = $stmt->execute();
+				$insert_id = $stmt->insert_id;				  
 					if (false === $result) {
 						die('execute() failed: ' . htmlspecialchars($stmt->error));
 					}
@@ -1997,7 +2181,14 @@ Status
 				if($result)
 					{
 					 // update user Wallet;
-					 $this->updateTopUserInfoBySubNet($DeviceId);
+					 
+					 if($discount !=0 && $this->checkIsCashback($promoCode) == 'C'){
+						
+						$this->UpdateTopCouponInfo($r, $Fee, $insert_id);						
+						$this->updateTopUserInfoBySubNet($DeviceId, $discount);
+					 }else{
+						 $this->updateTopUserInfoBySubNet($DeviceId, 0);
+					 }	 
 					  
 					 $res['message'] = "Subscription successfully";					 
 					 $res['status']  = 1;
@@ -2013,12 +2204,16 @@ Status
 		return $res;	
 }  
 
-private function updateTopUserInfoBySubNet($DeviceId){
+private function updateTopUserInfoBySubNet($DeviceId, $walletCB){
 	   
 				$SubscriptionStatus = "Subscribe";
-			$stmt = $this->conn->prepare("UPDATE TopUserInfo set SubscriptionStatus = ? WHERE DeviceId = ?");
-			 
-						$stmt->bind_param("ss", $SubscriptionStatus, $DeviceId);
+				if($walletCB != 0){
+					$stmt = $this->conn->prepare("UPDATE TopUserInfo set SubscriptionStatus = ?, WalletCashBack = ? WHERE DeviceId = ?");
+					$stmt->bind_param("sis", $SubscriptionStatus, $walletCB, $DeviceId);
+				}else{
+					$stmt = $this->conn->prepare("UPDATE TopUserInfo set SubscriptionStatus = ? WHERE DeviceId = ?");
+					$stmt->bind_param("ss", $SubscriptionStatus, $DeviceId);
+				}	
 						$stmt->execute();
 						$num_affected_rows = $stmt->affected_rows;
 						$stmt->close();
