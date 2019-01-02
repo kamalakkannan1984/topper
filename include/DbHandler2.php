@@ -210,7 +210,7 @@ private function checkIsCashback($promoCode){
         return $Type;
         
 }
-private function UpdateTopCouponInfo($r, $Fee, $result){
+private function UpdateTopCouponInfo($r, $WalletCashBack, $result){
 	
 	/*
 	TopCouponInfo
@@ -228,7 +228,7 @@ private function UpdateTopCouponInfo($r, $Fee, $result){
 	$BatchId 		= '9999999999';
 	$Coupon			= ($this->autoIncr())? 'C'.$this->autoIncr() : 'C1';
 	$CouponSR		= ($this->autoIncr())? 'CB'.$this->autoIncr() : 'CB1';
-	$CouponAmt		= $Fee;
+	$CouponAmt		= $WalletCashBack;
 	$Istatus		= 'Used';
 	$UsedDateTime	= date("Y-m-d H:i:s");
 	$Type  			= 'C';
@@ -449,7 +449,7 @@ public function subscriptionByUser($r){
 					 $this->updateTopUserInfoBySub($wallet, $walletCB, $DeviceId);
 					 if($this->checkIsCashback($promoCode) == 'C'){
 						
-						$this->UpdateTopCouponInfo($r, $Fee, $insert_id);
+						$this->UpdateTopCouponInfo($r, $walletCB + $discount, $insert_id);
 						$this->updateTopUserInfoBySub($wallet, $walletCB + $discount , $DeviceId);						
 						//$this->updateWalletCashback($DeviceId, $WalletAmt);
 					}	
@@ -1853,7 +1853,7 @@ public function subscription($r){
 								$wallet = $WalletArr['Wallet'] - $Fee; 
 							  
 							}
-							$this->UpdateTopCouponInfo($r, $Fee, $insert_id);						
+							$this->UpdateTopCouponInfo($r, $walletCB + $discount, $insert_id);						
 							//$wallet = $this->updateWalletCashback($DeviceId, $discount, $Fee);
 							$this->updateTopUserInfoBySub($wallet, $walletCB + $discount, $DeviceId);
 					}
@@ -2184,7 +2184,7 @@ Status
 					 
 					 if($discount !=0 && $this->checkIsCashback($promoCode) == 'C'){
 						
-						$this->UpdateTopCouponInfo($r, $Fee, $insert_id);						
+						$this->UpdateTopCouponInfo($r, $discount, $insert_id);						
 						$this->updateTopUserInfoBySubNet($DeviceId, $discount);
 					 }else{
 						 $this->updateTopUserInfoBySubNet($DeviceId, 0);
