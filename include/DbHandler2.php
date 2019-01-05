@@ -467,6 +467,55 @@ public function subscriptionByUser($r){
 							
 		return $res;	
 }
+//check installation cashback promocode
+public function checkInstallCashback($r){
+	
+	$deviceId = $r->DeviceId;
+	$res = array();
+	$stmt = $this->conn->prepare("SELECT PromoName from TopUserInfo WHERE DeviceId = ?");
+	$stmt->bind_param("i", $deviceId);
+	$stmt->execute();
+	$stmt->bind_result($PromoName);
+    $stmt->fetch();
+    $stmt->close();
+	$res['PromoName'] = $PromoName;
+    return $res;
+}
+////if available promocode update PromoCode in to TopUserInfo table
+public function updateInstallCashback($r){
+	$deviceId 	= $r->DeviceId;
+	$promoCode 	= $r->PromoCode;	
+	$res = array();
+	$stmt = $this->conn->prepare("SELECT CodeId, Type, Value, EndDate, Status from PromoCode WHERE CodeName = ?");
+	$stmt->bind_param("s", $promoCode);
+	$stmt->execute();
+	$stmt->bind_result($CodeId, $Type, $Value, $EndDate, $Status);
+    $stmt->fetch();
+    $stmt->close();
+	if($CodeId != null){			
+		
+		$stmt = $this->conn->prepare("UPDATE TopUserInfo set PromoName = ? WHERE DeviceId = ?");
+		$stmt->bind_param("si",$promoCode, $deviceId);
+		$stmt->execute();
+		$num_affected_rows = $stmt->affected_rows;
+		$stmt->close();
+		if($num_affected_rows > 0){
+			$res['CodeId'] 		= $CodeId;
+			$res['Type']   		= $Type;
+			$res['Value']  		= $Value;
+			$res['EndDate'] 	= $EndDate;
+			$res['Status']  	= $Status;
+			$res['message']		= 'success';				 
+		}else{
+			$res['status'] = 'TopUserInfo update Error!';
+		}
+		
+	}else{
+		$res['message'] = 'Invalid Promocode';
+	}	
+    
+	return $res;
+}	
 //v2- phase -2
     /**
      * Checking for duplicate user by email address
@@ -520,10 +569,10 @@ public function subscriptionByUser($r){
         //echo $id; die;
 		$res = array();		
 		if($type == 'Mobile'){
-			$stmt = $this->conn->prepare("SELECT IStatus, UserMbNo, DeviceId, Wallet, WalletCashBack, SubscriptionStatus, UserType, MasterWallet from TopUserInfo WHERE IMEI_1 = ? OR IMEI_2 = ?");
+			$stmt = $this->conn->prepare("SELECT IStatus, UserMbNo, DeviceId, Wallet, WalletCashBack, SubscriptionStatus, UserType, MasterWallet, PromoName from TopUserInfo WHERE IMEI_1 = ? OR IMEI_2 = ?");
 			$stmt->bind_param("ii", $id, $id);
 		}else if($type == 'Tablet'){
-		    $stmt = $this->conn->prepare("SELECT IStatus, UserMbNo, DeviceId, Wallet, WalletCashBack, SubscriptionStatus, UserType, MasterWallet from TopUserInfo WHERE MAC = ?");
+		    $stmt = $this->conn->prepare("SELECT IStatus, UserMbNo, DeviceId, Wallet, WalletCashBack, SubscriptionStatus, UserType, MasterWallet, PromoName from TopUserInfo WHERE MAC = ?");
 			$stmt->bind_param("i", $id);
 		}else{
 				$res['message'] = "The Device type did not match!";
@@ -531,7 +580,7 @@ public function subscriptionByUser($r){
 				return $res;
 		}		
         $stmt->execute();
-        $stmt->bind_result($IStatus, $UserMbNo, $DeviceId, $Wallet, $WalletCashBack,  $SubscriptionStatus, $UserType, $MasterWallet);
+        $stmt->bind_result($IStatus, $UserMbNo, $DeviceId, $Wallet, $WalletCashBack,  $SubscriptionStatus, $UserType, $MasterWallet, $PromoName);
         $stmt->fetch();       
 		$stmt->close();
         if($IStatus == 'Verified'){	
@@ -581,6 +630,7 @@ public function subscriptionByUser($r){
 				}else{
 					$res['MasterWallet'] = $MasterWallet;
 				}
+				$res['PromoName'] = $PromoName;
 				$res['message'] = "The Device is Registered and Verified";
 				$res['status']  = 1;
 		}else{

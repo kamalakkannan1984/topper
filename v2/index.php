@@ -95,6 +95,24 @@ $app->post('/getStandardFee', function() use ($app) {
 	$response= $db->getStandardFee($r);
 	echoRespnse(201, $response);
 });
+//check installation cashback promocode
+$app->post('/checkInstallCashback', function() use ($app) {
+
+	$db = new DbHandler();
+	$response = array();
+	$r = json_decode($app->request->getBody());	
+	$response= $db->checkInstallCashback($r);
+	echoRespnse(201, $response);
+});
+//if available promocode update PromoCode in to TopUserInfo table
+$app->post('/updateInstallCashback', function() use ($app) {
+
+	$db = new DbHandler();
+	$response = array();
+	$r = json_decode($app->request->getBody());	
+	$response= $db->updateInstallCashback($r);
+	echoRespnse(201, $response);
+});
 // v2- phase-2
 // Get board details	
 $app->post('/showlang', function() use ($app) {
