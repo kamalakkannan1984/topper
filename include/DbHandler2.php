@@ -515,7 +515,109 @@ public function updateInstallCashback($r){
 	}	
     
 	return $res;
+}
+
+ public function checkMyEarnings($r){
+	$deviceId = $r->DeviceId;
+	$UserType = "General";
+	$res = array();
+	$stmt = $this->conn->prepare("SELECT PromoName from TopUserInfo WHERE DeviceId = ? AND UserType != ?");
+	$stmt->bind_param("is", $deviceId, $UserType);
+	$stmt->execute();
+	$stmt->bind_result($PromoName);
+    $stmt->fetch();
+    $stmt->close();
+	//echo $PromoName; die;
+	$Status = "Active";
+	$stmt = $this->conn->prepare("SELECT CodeId from PromoCode WHERE CodeName = ? AND Status = ?");
+	$stmt->bind_param("ss", $PromoName, $Status);
+	$stmt->execute();
+    $stmt->store_result();
+    $num_rows = $stmt->num_rows;		
+    $stmt->close();
+    $statusPromo = ($num_rows > 0)? "Active" : "InActive";	
+	$res['StatusMessage'] = $statusPromo;
+    return $res;
+ }
+
+public function reportDealer($r){
+	$deviceId = $r->DeviceId;
+	$UserType = "Dealer";
+	$res = array();
+	$stmt = $this->conn->prepare("SELECT PromoName from TopUserInfo WHERE DeviceId = ? AND UserType = ?");
+	$stmt->bind_param("is", $deviceId, $UserType);
+	$stmt->execute();
+	$stmt->bind_result($PromoName);
+    $stmt->fetch();
+    $stmt->close();
+	$installTotal = 0;
+	$FeeSubscriperTotal = 0;
+	$subscriperTotal = 0;
+	if($PromoName != ""){
+		$UserType = "General";
+		/*$stmt = $this->conn->prepare("SELECT DeviceId as installTotal from TopUserInfo WHERE  PromoName = ? AND UserType = ?");
+		$stmt->bind_param("ss", $PromoName, $UserType);
+		$stmt->execute();
+		$stmt->bind_result($installTotal);
+		$stmt->fetch();
+		$stmt->close();
+		echo "<pre>"; print_r($installTotal); die; */
+		$sql = "SELECT DeviceId as DeviceId from TopUserInfo WHERE  PromoName = '$PromoName' AND UserType = '$UserType'";
+		$a_data = array();   
+		$ress = $this->conn->query($sql);
+		if($ress === false) {
+			$this->last_error = 'Wrong SQL: ' . $sql . ' Error: ' . $conn->ErrorMsg();
+		} else {
+			$ress->data_seek(0);
+			while($row = $ress->fetch_assoc()) {
+				array_push($a_data, $row);
+			}
+		}
+		//$res['std'] = $a_data;
+		
+		
+		$FeeSubscriperTotal = $this->FeeSubscriperTotal($PromoName,  1, $a_data);
+		$subscriperTotal = $this->FeeSubscriperTotal($PromoName, 0);
+		
+	}
+	$res['installTotal'] = COUNT($a_data);
+	$res['FeeSubscriperTotal'] = $FeeSubscriperTotal;
+	$res['subscriperTotal'] = $subscriperTotal;
+	return $res;
 }	
+
+  private function FeeSubscriperTotal($PromoName, $Mode, $a_data = array()){
+		
+		if(isset($a_data) && !empty($a_data)){
+			//echo "<pre>"; print_r($a_data); die;
+			$adata = array();
+			$PromoName = 'FirstInst';
+			foreach($a_data as $key => $row){
+				$data = array(); 
+				$DeviceId	= $row['DeviceId'];
+				
+				$stmt = $this->conn->prepare("SELECT COUNT(SubscriptionID) as FeeSubscriperTotal from Subscription WHERE  PromoName = ? AND Mode = ? AND DeviceId = ?");
+				$stmt->bind_param("sii", $PromoName, $Mode, $DeviceId);
+				$stmt->execute();
+				$stmt->bind_result($FeeSubscriperTotal);
+				$stmt->fetch();
+				$stmt->close();
+				$data['DeviceId'] 			= $row['DeviceId'];
+				$data['FeeSubscriperTotal'] = $FeeSubscriperTotal;
+				$adata[] = $data;
+			}
+				return $adata;
+		}else{	
+		$stmt = $this->conn->prepare("SELECT COUNT(SubscriptionID) as FeeSubscriperTotal from Subscription WHERE  PromoName = ? AND Mode = ?");
+		$stmt->bind_param("si", $PromoName, $Mode);
+		$stmt->execute();
+		$stmt->bind_result($FeeSubscriperTotal);
+		$stmt->fetch();
+		$stmt->close();
+		}
+		return $FeeSubscriperTotal;
+	  
+  }	  
 //v2- phase -2
     /**
      * Checking for duplicate user by email address

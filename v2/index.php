@@ -113,6 +113,24 @@ $app->post('/updateInstallCashback', function() use ($app) {
 	$response= $db->updateInstallCashback($r);
 	echoRespnse(201, $response);
 });
+//Report for My Earnings
+$app->post('/checkMyEarnings', function() use ($app) {
+
+	$db = new DbHandler();  
+	$response = array();
+	$r = json_decode($app->request->getBody());	
+	$response= $db->checkMyEarnings($r);
+	echoRespnse(201, $response);
+});
+// Report for Dealer
+$app->post('/reportDealer', function() use ($app) {
+
+	$db = new DbHandler();  
+	$response = array();
+	$r = json_decode($app->request->getBody());	
+	$response= $db->reportDealer($r);
+	echoRespnse(201, $response);
+});
 // v2- phase-2
 // Get board details	
 $app->post('/showlang', function() use ($app) {
