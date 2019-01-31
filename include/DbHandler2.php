@@ -414,12 +414,20 @@ public function subscriptionByUser($r){
 			
 			$WalletArr = $this->verifyDeviceID($DeviceId);
 					
-			
+			$calGST = $this->calculateGST($DeviceId, $Lang, $promoCode, $BoardId, $Fee);
+				$SGST  			= $calGST['SGST']; 
+				$CGST			= $calGST['CGST'];
+				$IGST			= $calGST['IGST'];
+				$SGSTAMT  		= $calGST['SGSTAMT'];
+				$CGSTAMT		= $calGST['CGSTAMT'];
+				$IGSTAMT		= $calGST['IGSTAMT'];
+				$DCOMMAMT		= $calGST['DCOMMAMT'];
+				$MCOMMAMT		= $calGST['MCOMMAMT']; 
 				
 				$DateofSub = date("Y-m-d H:i:s");
 				
-				$stmt = $this->conn->prepare("INSERT INTO Subscription(DeviceId, DateofSub, BoardId, Lang, Std, Fees, EndDateTime, Discount, PromoName) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?)");
-				$stmt->bind_param("issssisis", $DeviceId, $DateofSub, $BoardId, $Lang, $Std, $Fee, $EndDateTime, $discount, $promoCode);					
+				$stmt = $this->conn->prepare("INSERT INTO Subscription(DeviceId, DateofSub, BoardId, Lang, Std, Fees, EndDateTime, Discount, PromoName, SGST, CGST, IGST, SGSTAMT, CGSTAMT, IGSTAMT, DCOMMAMT, MCOMMAMT) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+				$stmt->bind_param("issssisisssssssss", $DeviceId, $DateofSub, $BoardId, $Lang, $Std, $Fee, $EndDateTime, $discount, $promoCode, $SGST, $CGST, $IGST, $SGSTAMT, $CGSTAMT, $IGSTAMT, $DCOMMAMT, $MCOMMAMT );					
 				$result = $stmt->execute();
 				$insert_id = $stmt->insert_id;				  
 					if (false === $result) {
@@ -576,7 +584,8 @@ public function reportDealer($r){
 		//$res['std'] = $a_data;
 		
 		
-		$FeeSubscriperTotal = $this->FeeSubscriperTotal($PromoName,  1, $a_data);
+		//$FeeSubscriperTotal = $this->FeeSubscriperTotal($PromoName,  1, $a_data);
+		$FeeSubscriperTotal = $this->FeeSubscriperTotal($PromoName,  1);
 		$subscriperTotal = $this->FeeSubscriperTotal($PromoName, 0);
 		
 	}
@@ -586,12 +595,59 @@ public function reportDealer($r){
 	return $res;
 }	
 
+public function reportsDealer($r){
+	$deviceId = $r->DeviceId;
+	$UserType = "Dealer";
+	$res = array();
+	$stmt = $this->conn->prepare("SELECT PromoName from TopUserInfo WHERE DeviceId = ? AND UserType = ?");
+	$stmt->bind_param("is", $deviceId, $UserType);
+	$stmt->execute();
+	$stmt->bind_result($PromoName);
+    $stmt->fetch();
+    $stmt->close();
+	$installTotal = 0;
+	$FeeSubscriperTotal = 0;
+	$subscriperTotal = 0;
+	if($PromoName != ""){
+		$UserType = "General";
+		/*$stmt = $this->conn->prepare("SELECT DeviceId as installTotal from TopUserInfo WHERE  PromoName = ? AND UserType = ?");
+		$stmt->bind_param("ss", $PromoName, $UserType);
+		$stmt->execute();
+		$stmt->bind_result($installTotal);
+		$stmt->fetch();
+		$stmt->close();
+		echo "<pre>"; print_r($installTotal); die; */
+		$sql = "SELECT DeviceId as DeviceId from TopUserInfo WHERE  PromoName = '$PromoName' AND UserType = '$UserType'";
+		$a_data = array();   
+		$ress = $this->conn->query($sql);
+		if($ress === false) {
+			$this->last_error = 'Wrong SQL: ' . $sql . ' Error: ' . $conn->ErrorMsg();
+		} else {
+			$ress->data_seek(0);
+			while($row = $ress->fetch_assoc()) {
+				array_push($a_data, $row);
+			}
+		}
+		//$res['std'] = $a_data;
+		
+		
+		$FeeSubscriperTotal = $this->FeeSubscriperTotal($PromoName,  1, $a_data);
+		//$FeeSubscriperTotal = $this->FeeSubscriperTotal($PromoName,  1);
+		$subscriperTotal    = $this->FeeSubscriperTotal($PromoName, 0);
+		
+	}
+	$res['installTotal'] = COUNT($a_data);
+	$res['FeeSubscriperTotal'] = $FeeSubscriperTotal;
+	$res['subscriperTotal'] = $subscriperTotal;
+	return $res;
+}
   private function FeeSubscriperTotal($PromoName, $Mode, $a_data = array()){
 		
 		if(isset($a_data) && !empty($a_data)){
 			//echo "<pre>"; print_r($a_data); die;
 			$adata = array();
 			$PromoName = 'FirstInst';
+			$i = 0;
 			foreach($a_data as $key => $row){
 				$data = array(); 
 				$DeviceId	= $row['DeviceId'];
@@ -602,11 +658,10 @@ public function reportDealer($r){
 				$stmt->bind_result($FeeSubscriperTotal);
 				$stmt->fetch();
 				$stmt->close();
-				$data['DeviceId'] 			= $row['DeviceId'];
-				$data['FeeSubscriperTotal'] = $FeeSubscriperTotal;
-				$adata[] = $data;
+				$i += $FeeSubscriperTotal;
+				
 			}
-				return $adata;
+				return $i;
 		}else{	
 		$stmt = $this->conn->prepare("SELECT COUNT(SubscriptionID) as FeeSubscriperTotal from Subscription WHERE  PromoName = ? AND Mode = ?");
 		$stmt->bind_param("si", $PromoName, $Mode);
@@ -617,7 +672,46 @@ public function reportDealer($r){
 		}
 		return $FeeSubscriperTotal;
 	  
-  }	  
+  }
+
+  public function checkLocation($r){
+	  $DeviceId	= $r->DeviceId;
+	  $res = array();
+	  $stmt = $this->conn->prepare("SELECT Location from TopUserInfo WHERE DeviceId = ? ");
+	  $stmt->bind_param("i", $DeviceId);
+	  $stmt->execute();
+      $stmt->bind_result($Location);
+      $stmt->fetch();
+      $stmt->close();
+	  if($Location == null || $Location == 'Unable to get Address' || $Location =='')
+	  {
+		  $res['status'] = "Location not found";
+	  }else{
+		  $res['status'] = "Location found";
+	  }		  
+      return $res;
+  }
+
+	public function locationUpdate($r){
+		
+		$DeviceId	= $r->DeviceId;
+		$Location 	= $r->Location ;
+		$res 		= array();
+		$stmt = $this->conn->prepare("UPDATE TopUserInfo set Location = ? WHERE DeviceId = ?");
+        $stmt->bind_param("si", $Location, $DeviceId);
+        $stmt->execute();
+        $num_affected_rows = $stmt->affected_rows;
+        $stmt->close();        
+		 if($num_affected_rows > 0)
+		 {
+			 	$res['message'] = "successfully updated";
+				$res['status']  = 1;
+		 }else{
+			 $res['message'] = "Update Error";
+			 $res['status']  = 0;
+		 }
+		 return $res;
+	}	
 //v2- phase -2
     /**
      * Checking for duplicate user by email address
@@ -1946,10 +2040,19 @@ public function subscription($r){
             } 				
 			if( $Fee <= $checkValue){ */
 //$Fee = $stdArr['SubscriptionFees'];
-				$DateofSub = date("Y-m-d H:i:s");
+				$calGST = $this->calculateGST($DeviceId, $Lang, $promoCode, $BoardId, $Fee);
+				$SGST  			= $calGST['SGST']; 
+				$CGST			= $calGST['CGST'];
+				$IGST			= $calGST['IGST'];
+				$SGSTAMT  		= $calGST['SGSTAMT'];
+				$CGSTAMT		= $calGST['CGSTAMT'];
+				$IGSTAMT		= $calGST['IGSTAMT'];
+				$DCOMMAMT		= $calGST['DCOMMAMT'];
+				$MCOMMAMT		= $calGST['MCOMMAMT']; 
+				$DateofSub 		= date("Y-m-d H:i:s");
 				//$EndDateTime = $stdArr['SubscriptionUpto'];
-				$stmt = $this->conn->prepare("INSERT INTO Subscription(DeviceId, DateofSub, BoardId, Lang, Std, Fees, EndDateTime, Discount, PromoName) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?)");
-				$stmt->bind_param("issssisis", $DeviceId, $DateofSub, $BoardId, $Lang, $Std, $Fee, $EndDateTime, $discount, $promoCode);					
+				$stmt = $this->conn->prepare("INSERT INTO Subscription(DeviceId, DateofSub, BoardId, Lang, Std, Fees, EndDateTime, Discount, PromoName, SGST, CGST, IGST, SGSTAMT, CGSTAMT, IGSTAMT, DCOMMAMT, MCOMMAMT) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+				$stmt->bind_param("issssisisssssssss", $DeviceId, $DateofSub, $BoardId, $Lang, $Std, $Fee, $EndDateTime, $discount, $promoCode, $SGST, $CGST, $IGST, $SGSTAMT, $CGSTAMT, $IGSTAMT, $DCOMMAMT, $MCOMMAMT);					
 				$result = $stmt->execute();
 				$insert_id = $stmt->insert_id;					  
 					if (false === $result) {
@@ -2286,7 +2389,74 @@ Status
 	   }
 		return $ress;
    }
+   private function calculateGST($DeviceId, $Lang, $promoCode, $BoardId, $Fee){
+	   
+	   
+	   
+	   $sql = "SELECT DeviceId FROM TopUserInfo WHERE Location LIKE '%Gujarat%' AND DeviceId = '$DeviceId'";
+		//echo $sql; die;
+		$a_data = array();
+        $dataCheck = array();		
+  		$res = $this->conn->query($sql);
+		
+		if($res === false) {
+  				$this->last_error = 'Wrong SQL: ' . $sql . ' Error: ' . $conn->ErrorMsg();
+		} else {
+  				$res->data_seek(0);
+ 				 while($row = $res->fetch_assoc()) {
+   					 array_push($dataCheck, $row);
+  					}
+		}
+		
+		$stmt = $this->conn->prepare("SELECT SGST, CGST, IGST from AppInfo WHERE Lang = ? AND BoardId = ?");
+		$stmt->bind_param("ss", $Lang, $BoardId);
+				
+        if ($stmt->execute()) {
+            
+            $stmt->bind_result($SGST, $CGST, $IGST);            
+            $stmt->fetch();
+			$a_data["SGST"] = $SGST;
+			$a_data["CGST"] = $CGST;
+            $a_data["IGST"] = $IGST;			
+            $stmt->close();            
 
+        } 
+		//getPromocode table
+		
+		$CodeName = $promoCode;
+		$stmts = $this->conn->prepare("SELECT DealerComm, MasterComm from PromoCode WHERE CodeName = ?");
+		$stmts->bind_param("s", $CodeName);
+				
+        if ($stmts->execute()) {
+            
+            $stmts->bind_result($DealerComm, $MasterComm);            
+            $stmts->fetch();
+			$a_data["DCOMMAMT"] = $DealerComm;
+			$a_data["MCOMMAMT"] = $MasterComm;           		
+            $stmts->close();            
+
+        } 
+		//Location
+		
+		$IGSTAMT = ROUND(($Fee - ($Fee * (100/(100 + $IGST)))),0);
+			
+		if(empty($dataCheck)){
+			// Other Location IGST
+			$a_data['IGSTAMT'] = $IGSTAMT;
+			$a_data["SGST"] = null;
+			$a_data["CGST"] = null;
+			$a_data['SGSTAMT'] = null;
+			$a_data['CGSTAMT'] = null;
+		}else{
+			// Gujarat Location SGST CGST
+			$a_data['SGSTAMT'] = $IGSTAMT/2;
+			$a_data['CGSTAMT'] = $IGSTAMT/2;
+			$a_data['IGSTAMT'] = null;
+			$a_data["IGST"] = null;
+		}
+		return $a_data;
+				
+   }	   
    public function netSubscription($r){
 
 			/*
@@ -2303,14 +2473,18 @@ Status
 						*/
 			//echo $Std  	 = $r->Std; die;
 			date_default_timezone_set('Asia/Kolkata');	
-			$DeviceId = $r->DeviceId;
-			$BoardId = $r->BoardId;
-			$Lang    = $r->Lang;
+			$DeviceId 		= $r->DeviceId;
+			$Lang    		= $r->Lang;
+			$promoCode 		= $r->promoCode;
+			$BoardId 		= $r->BoardId;
+			$Fee		 	= $r->Fee;
+			
+			//echo "<pre>"; print_r($calGST);
+						
 			$Std  	 = $r->Std;
-			$discount = $r->discount;
-			$promoCode = $r->promoCode;
+			$discount = $r->discount;			
 			$EndDateTime = $r->EndDateTime;
-			$Fee		 = $r->Fee;
+			
 			
 			
 			$res = array();
@@ -2322,8 +2496,18 @@ Status
 				//$Fee = $stdArr['SubscriptionFees'];
 				$DateofSub = date("Y-m-d H:i:s");;
 				//$EndDateTime = $stdArr['SubscriptionUpto'];
-				$stmt = $this->conn->prepare("INSERT INTO Subscription(DeviceId, DateofSub, BoardId, Lang, Std, Fees, EndDateTime, Discount, PromoName) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?)");
-				$stmt->bind_param("issssisis", $DeviceId, $DateofSub, $BoardId, $Lang, $Std, $Fee, $EndDateTime, $discount, $promoCode);					
+				$calGST = $this->calculateGST($DeviceId, $Lang, $promoCode, $BoardId, $Fee);
+				$SGST  			= $calGST['SGST']; 
+				$CGST			= $calGST['CGST'];
+				$IGST			= $calGST['IGST'];
+				$SGSTAMT  		= $calGST['SGSTAMT'];
+				$CGSTAMT		= $calGST['CGSTAMT'];
+				$IGSTAMT		= $calGST['IGSTAMT'];
+				$DCOMMAMT		= $calGST['DCOMMAMT'];
+				$MCOMMAMT		= $calGST['MCOMMAMT']; 
+				$stmt = $this->conn->prepare("INSERT INTO Subscription(DeviceId, DateofSub, BoardId, Lang, Std, Fees, EndDateTime,
+				Discount, PromoName, SGST, CGST, IGST, SGSTAMT, CGSTAMT, IGSTAMT, DCOMMAMT, MCOMMAMT) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+				$stmt->bind_param("issssisisiiiiiiii", $DeviceId, $DateofSub, $BoardId, $Lang, $Std, $Fee, $EndDateTime, $discount, $promoCode, $SGST, $CGST, $IGST, $SGSTAMT, $CGSTAMT, $IGSTAMT, $DCOMMAMT, $MCOMMAMT);					
 				$result = $stmt->execute();
 				$insert_id = $stmt->insert_id;				  
 					if (false === $result) {
