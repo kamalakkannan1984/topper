@@ -413,8 +413,8 @@ public function subscriptionByUser($r){
 			$stdArr = $this->standarddetails($r);
 			
 			$WalletArr = $this->verifyDeviceID($DeviceId);
-					
-			$calGST = $this->calculateGST($DeviceId, $Lang, $promoCode, $BoardId, $Fee);
+			$afterFee = $Fee-$discount;		
+			$calGST = $this->calculateGST($DeviceId, $Lang, $promoCode, $BoardId, $afterFee);
 				$SGST  			= $calGST['SGST']; 
 				$CGST			= $calGST['CGST'];
 				$IGST			= $calGST['IGST'];
@@ -2040,7 +2040,8 @@ public function subscription($r){
             } 				
 			if( $Fee <= $checkValue){ */
 //$Fee = $stdArr['SubscriptionFees'];
-				$calGST = $this->calculateGST($DeviceId, $Lang, $promoCode, $BoardId, $Fee);
+				$afterFee = $Fee-$discount;
+				$calGST = $this->calculateGST($DeviceId, $Lang, $promoCode, $BoardId, $afterFee);
 				$SGST  			= $calGST['SGST']; 
 				$CGST			= $calGST['CGST'];
 				$IGST			= $calGST['IGST'];
@@ -2496,7 +2497,8 @@ Status
 				//$Fee = $stdArr['SubscriptionFees'];
 				$DateofSub = date("Y-m-d H:i:s");;
 				//$EndDateTime = $stdArr['SubscriptionUpto'];
-				$calGST = $this->calculateGST($DeviceId, $Lang, $promoCode, $BoardId, $Fee);
+				$afterFee = $Fee-$discount;
+				$calGST = $this->calculateGST($DeviceId, $Lang, $promoCode, $BoardId, $afterFee);
 				$SGST  			= $calGST['SGST']; 
 				$CGST			= $calGST['CGST'];
 				$IGST			= $calGST['IGST'];
