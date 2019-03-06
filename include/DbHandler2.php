@@ -340,7 +340,7 @@ public function updateDemoUser($r){
 				
 				$stmt = $this->conn->prepare("UPDATE TopUserInfo set SubscriptionStatus = ? WHERE DeviceId = ?");
 			 
-						$stmt->bind_param("sis", $SubscriptionStatus, $DeviceId);
+						$stmt->bind_param("si", $SubscriptionStatus, $DeviceId);
 						$stmt->execute();
 						$num_affected_rows = $stmt->affected_rows;
 						$stmt->close();
@@ -692,8 +692,7 @@ public function reportsDealer($r){
       return $res;
   }
 
-	public function locationUpdate($r){
-		
+	public function locationUpdate($r){ 		
 		$DeviceId	= $r->DeviceId;
 		$Location 	= $r->Location ;
 		$res 		= array();
@@ -704,13 +703,86 @@ public function reportsDealer($r){
         $stmt->close();        
 		 if($num_affected_rows > 0)
 		 {
-			 	$res['message'] = "successfully updated";
-				$res['status']  = 1;
+			 $res['message'] = "successfully updated";
+			 $res['status']  = 1;
 		 }else{
 			 $res['message'] = "Update Error";
 			 $res['status']  = 0;
 		 }
 		 return $res;
+	}
+	public function reportsDistributor($r){
+	$deviceId = $r->DeviceId;
+	$UserType = "Distributor";
+	$res = array();
+	$stmt = $this->conn->prepare("SELECT PromoName from TopUserInfo WHERE DeviceId = ? AND UserType = ?");
+	$stmt->bind_param("is", $deviceId, $UserType);
+	$stmt->execute();
+	$stmt->bind_result($PromoName);
+    $stmt->fetch();
+    $stmt->close();
+	$installTotal = 0;
+	$FeeSubscriperTotal = 0;
+	$subscriperTotal = 0;
+	if($PromoName != ""){
+		$UserType = "Dealer";
+		/*$stmt = $this->conn->prepare("SELECT DeviceId as installTotal from TopUserInfo WHERE  PromoName = ? AND UserType = ?");
+		$stmt->bind_param("ss", $PromoName, $UserType);
+		$stmt->execute();
+		$stmt->bind_result($installTotal);
+		$stmt->fetch();
+		$stmt->close();
+		echo "<pre>"; print_r($installTotal); die; */
+		$sql = "SELECT DeviceId as DeviceId from TopUserInfo WHERE  PromoName = '$PromoName' AND UserType = '$UserType'";
+		$a_data = array();   
+		$ress = $this->conn->query($sql);
+		if($ress === false) {
+			$this->last_error = 'Wrong SQL: ' . $sql . ' Error: ' . $conn->ErrorMsg();
+		} else {
+			$ress->data_seek(0);
+			while($row = $ress->fetch_assoc()) {
+				array_push($a_data, $row);
+			}
+		}
+		//$res['std'] = $a_data;
+		//echo "<pre>"; print_r($a_data); die;
+		
+		$FeeSubscriperTotal = $this->FeeSubscriperTotal($PromoName,  1, $a_data);
+		//$FeeSubscriperTotal = $this->FeeSubscriperTotal($PromoName,  1);
+		$subscriperTotal    = $this->FeeSubscriperTotal($PromoName, 0);
+		
+		$res['installTotal'] = COUNT($a_data);
+		$res['FeeSubscriperTotal'] = $FeeSubscriperTotal;
+		$res['subscriperTotal'] = $subscriperTotal;
+		return $res;
+	}
+	
+}	
+	public function dealers($r){
+		$DeviceId = $r->DeviceId;
+		$sql = "SELECT code.CodeName		
+		FROM PromoCode code 
+		INNER JOIN TopUserInfo info
+		ON code.MasterPromoName = info.PromoName AND info.UserType = 'Distributor'
+		WHERE info.DeviceId = '$DeviceId' 
+		AND code.status = 'Active'
+		ORDER by code.CodeName";
+			
+					
+					$a_data = array();   
+					$ress = $this->conn->query($sql);
+					
+					if($ress === false) {
+							$this->last_error = 'Wrong SQL: ' . $sql . ' Error: ' . $conn->ErrorMsg();
+					} else {
+							$ress->data_seek(0);
+							 while($row = $ress->fetch_assoc()) {
+								 array_push($a_data, $row);
+								}
+					}
+					//echo "<pre>"; print_r($a_data); die;
+					$res['CodeNames'] = $a_data;
+					return $res;
 	}	
 //v2- phase -2
     /**
@@ -792,7 +864,7 @@ public function reportsDealer($r){
 					Std
 					Fees
 					EndDateTime*/
-					$sql = "SELECT sub.DateofSub, sub.BoardId, sub.Lang, sub.Std, sub.Fees, sub.EndDateTime, std.StdPWD, sub.Mode FROM Subscription sub INNER JOIN Standard std ON std.Std = sub.Std WHERE sub.DeviceId = '$DeviceId' GROUP BY sub.SubscriptionID ORDER by SubscriptionID DESC";
+					$sql = "SELECT sub.DateofSub, sub.BoardId, sub.Lang, sub.Std, sub.Fees, sub.EndDateTime, std.StdPWD, sub.Mode FROM Subscription sub INNER JOIN Standard std ON std.Std = sub.Std WHERE sub.DeviceId = '$DeviceId' AND sub.EndDateTime >= CURDATE() GROUP BY sub.SubscriptionID ORDER by SubscriptionID DESC";
 					
 					
 					$a_data = array();   
@@ -2439,7 +2511,7 @@ Status
         } 
 		//Location
 		
-		$IGSTAMT = ROUND(($Fee - ($Fee * (100/(100 + $IGST)))),0);
+		$IGSTAMT = ROUND(($Fee - ($Fee * (100/(100 + $IGST)))),2);
 			
 		if(empty($dataCheck)){
 			// Other Location IGST

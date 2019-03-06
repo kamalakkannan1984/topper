@@ -158,6 +158,24 @@ $app->post('/locationUpdate', function() use ($app) {
 	$response= $db->locationUpdate($r);
 	echoRespnse(201, $response);
 });
+//lookup
+$app->post('/reportsDistributor', function() use ($app) {
+
+	$db = new DbHandler();  
+	$response = array();
+	$r = json_decode($app->request->getBody());	
+	$response= $db->reportsDistributor($r);
+	echoRespnse(201, $response);
+});
+//Dealers
+$app->post('/dealers', function() use ($app) {
+
+	$db = new DbHandler();  
+	$response = array();
+	$r = json_decode($app->request->getBody());	
+	$response= $db->dealers($r);
+	echoRespnse(201, $response);
+});
 // v2- phase-2
 // Get board details	
 $app->post('/showlang', function() use ($app) {
