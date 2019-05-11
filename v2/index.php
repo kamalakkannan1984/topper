@@ -186,6 +186,13 @@ $app->post('/showlang', function() use ($app) {
 	echoRespnse(201, $response);
 });
 
+$app->get('/getMsgFilename', function() {
+	
+	$db = new DbHandler();
+	$response = array();
+	$response= $db->getMsgFilename();
+	echoRespnse(201, $response);
+});
 
 // SMS API  AND Save Mobile number
 

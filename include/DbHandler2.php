@@ -355,6 +355,28 @@ public function updateDemoUser($r){
 						} 
 	return $res;					
 }
+
+public function getMsgFilename(){
+
+		$sql = "SELECT FileName FROM Message WHERE NOW() between StartDate and EndDate";
+			
+					
+					$a_data = array();   
+					$ress = $this->conn->query($sql);
+					
+					if($ress === false) {
+							$this->last_error = 'Wrong SQL: ' . $sql . ' Error: ' . $conn->ErrorMsg();
+					} else {
+							$ress->data_seek(0);
+							 while($row = $ress->fetch_assoc()) {
+								 array_push($a_data, $row);
+								}
+					}
+					//echo "<pre>"; print_r($a_data); die;
+					$res['FileNames'] = $a_data;
+					return $res;
+		
+}	
 public function getStandardFee($r){
 	
 	    $BoardId = $r->BoardId;
