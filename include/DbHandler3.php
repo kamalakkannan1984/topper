@@ -7,7 +7,7 @@
  * @author Ravi Tamada
  * @link URL Tutorial link
  */
-class DbHandler {
+class DbHandler3 {
 
     private $conn;
 
@@ -17,92 +17,27 @@ class DbHandler {
         $db = new DbConnect();
         $this->conn = $db->connect();
     }
-
-    /* ------------- `users` table method ------------------ */
-
-    /**
-     * Creating new user
-     * @param String $name User full name
-     * @param String $email User login email id
-     * @param String $password User login password
-     */
-    public function createUser($name, $email, $password) {
-        require_once 'PassHash.php';
-        $response = array();
-
-        // First check if user already existed in db
-        if (!$this->isUserExists($email)) {
-            // Generating password hash
-            $password_hash = PassHash::hash($password);
-
-            // Generating API key
-            $api_key = $this->generateApiKey();
-
-            // insert query
-            $stmt = $this->conn->prepare("INSERT INTO users(name, email, password_hash, api_key, status) values(?, ?, ?, ?, 1)");
-            $stmt->bind_param("ssss", $name, $email, $password_hash, $api_key);
-
-            $result = $stmt->execute();
-
-            $stmt->close();
-
-            // Check for successful insertion
-            if ($result) {
-                // User successfully inserted
-                return USER_CREATED_SUCCESSFULLY;
-            } else {
-                // Failed to create user
-                return USER_CREATE_FAILED;
-            }
-        } else {
-            // User with same email already existed in the db
-            return USER_ALREADY_EXISTED;
-        }
-
-        return $response;
-    }
-
-    /**
-     * Checking user login
-     * @param String $email User login email id
-     * @param String $password User login password
-     * @return boolean User login status success/fail
-     */
-    public function checkLogin($email, $password) {
-        // fetching user by email
-        $stmt = $this->conn->prepare("SELECT password_hash FROM users WHERE email = ?");
-
-        $stmt->bind_param("s", $email);
-
+//Start: v3 - phase - 3
+    public function fireBaseId($r){
+		$res = array();
+		$TokenId = $r->TokenId;
+		$DeviceId = $r->DeviceId;
+		$stmt = $this->conn->prepare("UPDATE TopUserInfo set TokenId = ? WHERE DeviceId = ?");
+        $stmt->bind_param("ss", $TokenId, $DeviceId);
         $stmt->execute();
+        $num_affected_rows = $stmt->affected_rows;
+        $stmt->close();		
+        if($num_affected_rows)
+		{			 
+			$res['message'] = "Updated successfully";					 
+			$res['status']  = 1;						 
+		}
+		return $res;				
+	}	
 
-        $stmt->bind_result($password_hash);
-
-        $stmt->store_result();
-
-        if ($stmt->num_rows > 0) {
-            // Found user with the email
-            // Now verify the password
-
-            $stmt->fetch();
-
-            $stmt->close();
-
-            if (PassHash::check_password($password_hash, $password)) {
-                // User password is correct
-                return TRUE;
-            } else {
-                // user password is incorrect
-                return FALSE;
-            }
-        } else {
-            $stmt->close();
-
-            // user not existed with the email
-            return FALSE;
-        }
-    }
-//v2- phase -2
+//End: v3 - phase -3
+    
+//v2- phase -2 -- removed
 //checkTrialStatus
 	public function checkTrialStatus($r){
 		$res = array();

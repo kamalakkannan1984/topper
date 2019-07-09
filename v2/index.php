@@ -186,11 +186,12 @@ $app->post('/showlang', function() use ($app) {
 	echoRespnse(201, $response);
 });
 
-$app->get('/getMsgFilename', function() {
+$app->post('/getMsgFilename', function() use ($app) {
 	
 	$db = new DbHandler();
 	$response = array();
-	$response= $db->getMsgFilename();
+	$r = json_decode($app->request->getBody());
+	$response= $db->getMsgFilename($r);
 	echoRespnse(201, $response);
 });
 
