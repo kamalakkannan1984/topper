@@ -33,6 +33,104 @@ class DbHandler3 {
 			$res['status']  = 1;						 
 		}
 		return $res;				
+	}
+    public function saveMessenger(){
+	date_default_timezone_set('Asia/Kolkata');		
+	$response               = array();
+	$DeviceId 				= $_POST['DeviceId'];
+		$stmt = $this->conn->prepare("SELECT PromoName, UserType, BroadcastStdList from TopUserInfo WHERE  DeviceId = ?");
+		$stmt->bind_param("i", $DeviceId);
+		$stmt->execute();
+        $stmt->bind_result($PromoName, $UserType, $BroadcastStdList);
+        $stmt->fetch();
+        $stmt->close();
+		
+	$MsgSubject				= $_POST['MsgSubject'];
+	$MsgBody				= $_POST['MsgBody'];
+	$ApproverUserType       = 'Admin';	
+	$Broadcastor            = $DeviceId; 	
+    $Approver				= $DeviceId;
+    $UserType				= $UserType;
+	$Status					= ($UserType === $ApproverUserType)? 'Approval' : 'Live';
+	$StatusTime				= date("Y-m-d H:i:s");
+    $MsgList				= $BroadcastStdList;
+	$CreationTime			= date("Y-m-d H:i:s");
+	$PromoName				= $PromoName;
+	
+	if (isset($_FILES['uploadFieldName'])) {
+		$imgs = array();
+		$files = $_FILES['uploadFieldName'];
+		
+			
+				$temp 				= explode(".", $_FILES["uploadFieldName"]["name"]);
+				$name = uniqid('img-'.date('Ymd').'-');
+				$name = $name.'.'. end($temp);
+				$dir = 'D:/toppermsgbox/ETEN/CBSE/EN/Banners';				
+				$defaultFolder = 'MsgAttachments';
+				$folderDir = $dir.'/'.$PromoName.'/'.$defaultFolder.'/';
+				if (!file_exists($folderDir)) {
+					mkdir($folderDir, 0777, true);
+				}
+				if (move_uploaded_file($files['tmp_name'], $folderDir . $name) === true) {
+					$AttFileName 	= $name;
+					$AttOrgFileName = $files['name'];
+					$AttFileType 	= end($temp);
+					$AttFileSize 	= $files['size'];
+				}
+			
+		
+    }
+	
+	    
+		/*
+		TableName: Messenger
+		*MsgId
+		*PromoName
+		Broadcastor
+		CreationTime
+		*Approver
+		Status
+		StatusTime
+		NotiNote
+		NotiTimeStamp
+		*MsgSubject
+		*MsgBody
+		AttFileName
+		AttOrgFileName
+		AttFileType
+		AttFileSize
+		ApproverRemark
+		MsgList
+		*/
+	
+		$stmt = $this->conn->prepare("INSERT INTO Messenger(PromoName,
+		Broadcastor,
+		CreationTime,
+		Approver,
+		Status,
+		StatusTime,
+		MsgSubject,
+		MsgBody,
+		AttFileName,
+		AttOrgFileName,
+		AttFileType,
+		AttFileSize, MsgList) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+		$stmt->bind_param("sssssssssssss", $PromoName,
+		$Broadcastor,
+		$CreationTime,
+		$Approver,
+		$Status,
+		$StatusTime,
+		$MsgSubject, $MsgBody, $AttFileName, $AttOrgFileName, $AttFileType, $AttFileSize, $MsgList);					
+		$result = $stmt->execute();					 
+		if (false === $result) {
+				die('execute() failed: ' . htmlspecialchars($stmt->error));
+		}
+		$stmt->close();
+		
+		$res['message'] = "Messenger updated ";
+		$res['status']  = 1;
+		return $res;
 	}	
 
 //End: v3 - phase -3
@@ -449,9 +547,10 @@ public function checkInstallCashback($r){
 ////if available promocode update PromoCode in to TopUserInfo table
 public function updateInstallCashback($r){
 	$deviceId 	= $r->DeviceId;
-	$promoCode 	= $r->PromoCode;	
+	$promoCode 	= $r->PromoCode;
+	$Status = "Active";	
 	$res = array();
-	$stmt = $this->conn->prepare("SELECT CodeId, Type, Value, EndDate, Status from PromoCode WHERE CodeName = ?");
+	$stmt = $this->conn->prepare("SELECT CodeId, Type, Value, EndDate, Status from PromoCode WHERE CodeName = ? AND Status = ?");
 	$stmt->bind_param("s", $promoCode);
 	$stmt->execute();
 	$stmt->bind_result($CodeId, $Type, $Value, $EndDate, $Status);
