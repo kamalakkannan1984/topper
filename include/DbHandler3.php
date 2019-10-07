@@ -34,10 +34,10 @@ class DbHandler3 {
 		}
 		return $res;				
 	}
-    public function saveMessenger(){
+    public function saveMessenger($r){
 	date_default_timezone_set('Asia/Kolkata');		
 	$response               = array();
-	$DeviceId 				= $_POST['DeviceId'];
+	$DeviceId 				= $r->DeviceId;
 		$stmt = $this->conn->prepare("SELECT PromoName, UserType, BroadcastStdList from TopUserInfo WHERE  DeviceId = ?");
 		$stmt->bind_param("i", $DeviceId);
 		$stmt->execute();
@@ -45,8 +45,8 @@ class DbHandler3 {
         $stmt->fetch();
         $stmt->close();
 		
-	$MsgSubject				= $_POST['MsgSubject'];
-	$MsgBody				= $_POST['MsgBody'];
+	$MsgSubject				= $r->MsgSubject;
+	$MsgBody				= $r->MsgBody;
 	$ApproverUserType       = 'Admin';	
 	$Broadcastor            = $DeviceId; 	
     $Approver				= $DeviceId;
@@ -56,6 +56,7 @@ class DbHandler3 {
     $MsgList				= $BroadcastStdList;
 	$CreationTime			= date("Y-m-d H:i:s");
 	$PromoName				= $PromoName;
+	$recipient				= $r->recipient;
 	
 	if (isset($_FILES['uploadFieldName'])) {
 		$imgs = array();
@@ -114,14 +115,14 @@ class DbHandler3 {
 		AttFileName,
 		AttOrgFileName,
 		AttFileType,
-		AttFileSize, MsgList) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
-		$stmt->bind_param("sssssssssssss", $PromoName,
+		AttFileSize, MsgList, recipient) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+		$stmt->bind_param("ssssssssssssss", $PromoName,
 		$Broadcastor,
 		$CreationTime,
 		$Approver,
 		$Status,
 		$StatusTime,
-		$MsgSubject, $MsgBody, $AttFileName, $AttOrgFileName, $AttFileType, $AttFileSize, $MsgList);					
+		$MsgSubject, $MsgBody, $AttFileName, $AttOrgFileName, $AttFileType, $AttFileSize, $MsgList, $recipient);					
 		$result = $stmt->execute();					 
 		if (false === $result) {
 				die('execute() failed: ' . htmlspecialchars($stmt->error));
@@ -131,8 +132,50 @@ class DbHandler3 {
 		$res['message'] = "Messenger updated ";
 		$res['status']  = 1;
 		return $res;
-	}	
+}	
+public function getMsgrSubject($r){
+	    $response               = array();
+	    $PromoName 				= $r->PromoName;
+		$stmt = $this->conn->prepare("SELECT MsgSubTitle, DisplayIndex from MessengerSubject WHERE  PromoName = ?");
+		$stmt->bind_param("s", $PromoName);
+		$stmt->execute();
+        //$stmt->bind_result($MsgSubTitle, $DisplayIndex);
+		$subList = $stmt->get_result();
+        $stmt->fetch();
+        $stmt->close();		
+		$response['message'] = "success";
+		$response['status']  = 1;
+		$response["subjectList"] = array();
+		while ($subject = $subList->fetch_assoc()) {
+			 $tmp = array();			
+             $tmp["MsgSubTitle"] = $subject["MsgSubTitle"];
+             $tmp["DisplayIndex"] = $subject["DisplayIndex"];			
+             array_push($response["subjectList"], $tmp);
+		}
+		return $response;
+}
 
+public function getMessengerList($r){
+		$response               = array();
+	    $Broadcastor 			= $r->DeviceId;
+		$stmt = $this->conn->prepare("SELECT MsgSubject, MsgBody from Messenger WHERE  Broadcastor = ?");
+		$stmt->bind_param("s", $Broadcastor);
+		$stmt->execute();
+        //$stmt->bind_result($MsgSubTitle, $DisplayIndex);
+		$subList = $stmt->get_result();
+        $stmt->fetch();
+        $stmt->close();		
+		$response['message'] = "success";
+		$response['status']  = 1;
+		$response["messengerList"] = array();
+		while ($subject = $subList->fetch_assoc()) {
+			 $tmp = array();			
+             $tmp["MsgSubject"] = $subject["MsgSubject"];
+             $tmp["MsgBody"] = $subject["MsgBody"];			
+             array_push($response["messengerList"], $tmp);
+		}
+		return $response;
+}	
 //End: v3 - phase -3
     
 //v2- phase -2 -- removed

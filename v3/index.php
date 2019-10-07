@@ -29,15 +29,21 @@ $app->post('/getFireBaseId', function() use ($app) {
 	echoRespnse(201, $response);
 });
 //saveMessenger
-$app->post('/saveMessenger', 'fileupload');
-function fileupload () {
+$app->post('/saveMessenger', function() use ($app) {
+	$response               = array();
+	$r 						= json_decode($app->request->getBody());	
+	$db 					= new DbHandler3();
+	$response 				= $db->saveMessenger($r); 	
+	echoResponse(201, $response);
+});	
+/*function fileupload () {
    
     $response               = array();  
 	$db 					= new DbHandler3();
 	$response 				= $db->saveMessenger(); 	
 	echoResponse(201, $response);
 	
-}
+}*/
 //saveMessenger
 /*$app->post('/saveMessenger', function() use ($app) {
     
@@ -49,6 +55,29 @@ function fileupload () {
 	$response= $db->fireBaseId($r);
 	echoRespnse(201, $response);
 });
+*/
+/*  Get list messenger subject
+ @param promo name
+ */
+$app->post('/getMsgrSubject', function() use ($app) {
+	$response               = array();
+	$r 						= json_decode($app->request->getBody());	
+	$db 					= new DbHandler3();
+	$response 				= $db->getMsgrSubject($r); 	
+	echoResponse(201, $response);
+});	
+
+/*  Get list of messenger
+ @param device id
+ */
+$app->post('/getMessengerList', function() use ($app) {
+	$response               = array();
+	$r 						= json_decode($app->request->getBody());	
+	$db 					= new DbHandler3();
+	$response 				= $db->getMessengerList($r); 	
+	echoResponse(201, $response);
+});	
+
 /**
  * Echoing json response to client
  * @param String $status_code Http response code
