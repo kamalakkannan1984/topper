@@ -78,6 +78,17 @@ $app->post('/getMessengerList', function() use ($app) {
 	echoResponse(201, $response);
 });	
 
+/*  Get list of messenger
+ @param codeName
+ */
+$app->post('/getBroadcastStdList', function() use ($app) {
+	$response               = array();
+	$r 						= json_decode($app->request->getBody());	
+	$db 					= new DbHandler3();
+	$response 				= $db->getBroadcastStdList($r); 	
+	echoResponse(201, $response);
+});	
+
 /**
  * Echoing json response to client
  * @param String $status_code Http response code

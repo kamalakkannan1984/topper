@@ -175,6 +175,20 @@ public function getMessengerList($r){
              array_push($response["messengerList"], $tmp);
 		}
 		return $response;
+}
+
+public function getBroadcastStdList($r){
+		$codeName = $r->codeName;
+		$res 	  = array();
+		$stmt = $this->conn->prepare("SELECT BroadcastStdList from PromoCode WHERE CodeName = ?");
+        $stmt->bind_param("s", $codeName);			
+		$stmt->execute();
+        $stmt->bind_result($BroadcastStdList);
+        $stmt->fetch();
+        $stmt->close();
+		$res['BroadcastStdList'] = $BroadcastStdList;
+        return $res;
+        
 }	
 //End: v3 - phase -3
     
