@@ -831,7 +831,7 @@ public function reportsDealer($r){
 				return $res;
 		}		
         $stmt->execute();
-        $stmt->store_result();
+        //$stmt->store_result();
         $num_rows = $stmt->num_rows;		
         $stmt->close();
         return $num_rows > 0;
@@ -862,7 +862,7 @@ public function reportsDealer($r){
 		$res = array();		
 		if($type == 'Mobile'){
 			$stmt = $this->conn->prepare("SELECT IStatus, UserMbNo, DeviceId, Wallet, WalletCashBack, SubscriptionStatus, UserType, MasterWallet, PromoName from TopUserInfo WHERE IMEI_1 = ? OR IMEI_2 = ?");
-			$stmt->bind_param("ii", $id, $id);
+			$stmt->bind_param("ss", $id, $id);
 		}else if($type == 'Tablet'){
 		    $stmt = $this->conn->prepare("SELECT IStatus, UserMbNo, DeviceId, Wallet, WalletCashBack, SubscriptionStatus, UserType, MasterWallet, PromoName from TopUserInfo WHERE MAC = ?");
 			$stmt->bind_param("i", $id);

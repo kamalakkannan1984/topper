@@ -26,7 +26,7 @@ $app->post('/getFireBaseId', function() use ($app) {
 	$response = array();
 	$r = json_decode($app->request->getBody());
 	$response= $db->fireBaseId($r);
-	echoRespnse(201, $response);
+	echoResponse(201, $response);
 });
 //saveMessenger
 $app->post('/saveMessenger', function() use ($app) {

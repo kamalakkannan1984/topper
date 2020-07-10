@@ -25,13 +25,13 @@ class DbHandler3 {
 		$stmt = $this->conn->prepare("UPDATE TopUserInfo set TokenId = ? WHERE DeviceId = ?");
         $stmt->bind_param("ss", $TokenId, $DeviceId);
         $stmt->execute();
-        $num_affected_rows = $stmt->affected_rows;
+        $num_affected_rows = $stmt->affected_rows;		
         $stmt->close();		
-        if($num_affected_rows)
-		{			 
-			$res['message'] = "Updated successfully";					 
-			$res['status']  = 1;						 
-		}
+        //if($num_affected_rows)
+		//{			 
+		$res['message'] = "Updated successfully";					 
+		$res['status']  = 1;						 
+		//}
 		return $res;				
 	}
     public function saveMessenger($r){
@@ -136,7 +136,7 @@ class DbHandler3 {
 public function getMsgrSubject($r){
 	    $response               = array();
 	    $PromoName 				= $r->PromoName;
-		$stmt = $this->conn->prepare("SELECT MsgSubTitle, DisplayIndex from MessengerSubject WHERE  PromoName = ?");
+		$stmt = $this->conn->prepare("SELECT MsgSubTitle, DisplayIndex from MessengerSubject WHERE  PromoName = ? ORDER BY DisplayIndex");
 		$stmt->bind_param("s", $PromoName);
 		$stmt->execute();
         //$stmt->bind_result($MsgSubTitle, $DisplayIndex);
@@ -158,7 +158,7 @@ public function getMsgrSubject($r){
 public function getMessengerList($r){
 		$response               = array();
 	    $Broadcastor 			= $r->DeviceId;
-		$stmt = $this->conn->prepare("SELECT MsgSubject, MsgBody from Messenger WHERE  Broadcastor = ?");
+		$stmt = $this->conn->prepare("SELECT Msg.MsgSubject, Msg.MsgBody, Msg.CreationTime, Msg.Status, user.username from Messenger Msg INNER JOIN TopUserInfo user ON Msg.Broadcastor = user.DeviceId WHERE  Msg.Broadcastor = ?");
 		$stmt->bind_param("s", $Broadcastor);
 		$stmt->execute();
         //$stmt->bind_result($MsgSubTitle, $DisplayIndex);
@@ -171,7 +171,10 @@ public function getMessengerList($r){
 		while ($subject = $subList->fetch_assoc()) {
 			 $tmp = array();			
              $tmp["MsgSubject"] = $subject["MsgSubject"];
-             $tmp["MsgBody"] = $subject["MsgBody"];			
+             $tmp["MsgBody"] = $subject["MsgBody"];
+			 $tmp["CreationTime"] = $subject["CreationTime"];
+			 $tmp["Status"] = $subject["Status"];
+			 $tmp["username"] = $subject["username"];			
              array_push($response["messengerList"], $tmp);
 		}
 		return $response;
